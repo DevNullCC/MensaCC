@@ -17,32 +17,34 @@
   <button onclick="aggiornaFile()">Aggiorna file sulla repo</button>
   <div id="result" class="result"></div>
   <script>
-    async function aggiornaFile() {
-      const content = document.getElementById('contenuto').value;
-      const resultDiv = document.getElementById('result');
-      resultDiv.textContent = "Sto aggiornando...";
+async function aggiornaFile() {
+  const textarea = document.getElementById('contenuto');
+  console.log('DEBUG: textarea', textarea); // Puoi lasciarla per vedere se il textarea c’è
+  const content = textarea ? textarea.value : null;
+  const resultDiv = document.getElementById('result');
+  resultDiv.textContent = "Sto aggiornando...";
+  resultDiv.className = 'result';
+
+  try {
+    const resp = await fetch('https://mensa-cc-backend-pfcmm7668-devnullccs-projects.vercel.app/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: content })
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      resultDiv.textContent = "File aggiornato con successo!";
       resultDiv.className = 'result';
-
-      try {
-        const resp = await fetch('https://mensa-cc-backend-pfcmm7668-devnullccs-projects.vercel.app/api/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: content })
-        });
-
-        const data = await resp.json();
-        if (resp.ok) {
-          resultDiv.textContent = "File aggiornato con successo!";
-          resultDiv.className = 'result';
-        } else {
-          resultDiv.textContent = "Errore backend: " + data.message;
-          resultDiv.className = 'result error';
-        }
-      } catch (e) {
-        resultDiv.textContent = "Errore di connessione!";
-        resultDiv.className = 'result error';
-      }
+    } else {
+      resultDiv.textContent = "Errore backend: " + data.message;
+      resultDiv.className = 'result error';
     }
-  </script>
+  } catch (e) {
+    resultDiv.textContent = "Errore di connessione!";
+    resultDiv.className = 'result error';
+  }
+}
+</script>
 </body>
 </html>
