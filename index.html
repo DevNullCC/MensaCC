@@ -17,58 +17,29 @@
   <button onclick="aggiornaFile()">Aggiorna file sulla repo</button>
   <div id="result" class="result"></div>
   <script>
-    // CONFIGURA QUI i dati della tua repo e file!
-    const owner = 'DevNullCC'; // <-- Cambia con il tuo user
-    const repo = 'MensaCC';  // <-- Cambia con il nome repo
-    const path = 'Mess.txt'; // <-- Cambia se vuoi un altro file
-    const token = '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'; // <-- Metti qui temporaneamente il tuo PAT per la demo (NON lasciare mai online in futuro!)
-
     async function aggiornaFile() {
       const content = document.getElementById('contenuto').value;
       const resultDiv = document.getElementById('result');
       resultDiv.textContent = "Sto aggiornando...";
       resultDiv.className = 'result';
 
-      // Recupera SHA attuale del file (necessario per update)
-      let sha;
       try {
-        const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-          headers: {
-            'Authorization': 'token ' + token,
-            'Accept': 'application/vnd.github.v3+json'
-          }
+        const resp = await fetch('https://mensa-cc-backend-pfcmm7668-devnullccs-projects.vercel.app/api/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: content })
         });
-        if (!resp.ok) throw new Error("File non trovato o problema di accesso");
+
         const data = await resp.json();
-        sha = data.sha;
+        if (resp.ok) {
+          resultDiv.textContent = "File aggiornato con successo!";
+          resultDiv.className = 'result';
+        } else {
+          resultDiv.textContent = "Errore backend: " + data.message;
+          resultDiv.className = 'result error';
+        }
       } catch (e) {
-        resultDiv.textContent = "Errore: non trovo il file o token errato!";
-        resultDiv.className = 'result error';
-        return;
-      }
-
-      // Prepara il contenuto in base64
-      const b64content = btoa(unescape(encodeURIComponent(content)));
-
-      // Effettua la PUT (update)
-      try {
-        const resp2 = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': 'token ' + token,
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify({
-            message: 'Update da GitHub Pages',
-            content: b64content,
-            sha: sha
-          })
-        });
-        if (!resp2.ok) throw new Error("Errore durante update");
-        resultDiv.textContent = "File aggiornato con successo!";
-        resultDiv.className = 'result';
-      } catch (e) {
-        resultDiv.textContent = "Errore durante l'aggiornamento!";
+        resultDiv.textContent = "Errore di connessione!";
         resultDiv.className = 'result error';
       }
     }
