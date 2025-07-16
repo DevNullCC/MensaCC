@@ -2,49 +2,63 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Test aggiornamento file via GitHub API</title>
+  <title>Gestione Menu Mensa</title>
   <style>
     body { font-family: sans-serif; margin: 2em; }
-    textarea { width: 100%; height: 100px; }
+    label { font-weight: bold; }
     .result { margin-top: 1em; color: green; }
     .error { color: red; }
   </style>
 </head>
 <body>
-  <h1>Demo aggiornamento file su GitHub</h1>
-  <p>Scrivi un messaggio qui sotto e clicca "Aggiorna file":</p>
-  <textarea id="contenuto"></textarea><br>
-  <button onclick="aggiornaFile()">Aggiorna file sulla repo</button>
+  <h1>Gestione Menu Mensa</h1>
+  
+  <form id="formExcel">
+    <label for="fileExcel">Carica file Excel menu (.xlsx):</label>
+    <input type="file" id="fileExcel" accept=".xlsx" required><br><br>
+    <button type="button" onclick="caricaExcel()">Carica menu su GitHub</button>
+  </form>
+
+  <hr>
+  
+  <form id="formDay">
+    <label for="dayStart">Giorno di partenza pubblicazione:</label>
+    <select id="dayStart">
+      <option value="LUNEDI_1">LUNEDÌ - Settimana 1</option>
+      <option value="LUNEDI_2">LUNEDÌ - Settimana 2</option>
+      <option value="LUNEDI_3">LUNEDÌ - Settimana 3</option>
+      <option value="LUNEDI_4">LUNEDÌ - Settimana 4</option>
+      <option value="MARTEDI_1">MARTEDÌ - Settimana 1</option>
+      <option value="MARTEDI_2">MARTEDÌ - Settimana 2</option>
+      <option value="MARTEDI_3">MARTEDÌ - Settimana 3</option>
+      <option value="MARTEDI_4">MARTEDÌ - Settimana 4</option>
+      <option value="MERCOLEDI_1">MERCOLEDÌ - Settimana 1</option>
+      <option value="MERCOLEDI_2">MERCOLEDÌ - Settimana 2</option>
+      <option value="MERCOLEDI_3">MERCOLEDÌ - Settimana 3</option>
+      <option value="MERCOLEDI_4">MERCOLEDÌ - Settimana 4</option>
+      <option value="GIOVEDI_1">GIOVEDÌ - Settimana 1</option>
+      <option value="GIOVEDI_2">GIOVEDÌ - Settimana 2</option>
+      <option value="GIOVEDI_3">GIOVEDÌ - Settimana 3</option>
+      <option value="GIOVEDI_4">GIOVEDÌ - Settimana 4</option>
+      <option value="VENERDI_1">VENERDÌ - Settimana 1</option>
+      <option value="VENERDI_2">VENERDÌ - Settimana 2</option>
+      <option value="VENERDI_3">VENERDÌ - Settimana 3</option>
+      <option value="VENERDI_4">VENERDÌ - Settimana 4</option>
+    </select>
+    <button type="button" onclick="salvaDay()">Salva su GitHub</button>
+  </form>
+  
   <div id="result" class="result"></div>
+  
   <script>
-async function aggiornaFile() {
-  const textarea = document.getElementById('contenuto');
-  console.log('DEBUG: textarea', textarea); // Puoi lasciarla per vedere se il textarea c’è
-  const content = textarea ? textarea.value : null;
-  const resultDiv = document.getElementById('result');
-  resultDiv.textContent = "Sto aggiornando...";
-  resultDiv.className = 'result';
-
-  try {
-    const resp = await fetch('https://mensa-cc-backend-cwurz6r1b-devnullccs-projects.vercel.app/api/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: content })
-    });
-
-    const data = await resp.json();
-    if (resp.ok) {
-      resultDiv.textContent = "File aggiornato con successo!";
-      resultDiv.className = 'result';
-    } else {
-      resultDiv.textContent = "Errore backend: " + data.message;
-      resultDiv.className = 'result error';
+    // Demo: queste funzioni vanno poi collegate al backend (step 2)
+    function caricaExcel() {
+      document.getElementById('result').textContent = "TODO: upload Excel (step 2)";
     }
-  } catch (e) {
-    resultDiv.textContent = "Errore di connessione!";
-    resultDiv.className = 'result error';
-  }
-}
-</script>
+    function salvaDay() {
+      const val = document.getElementById('dayStart').value;
+      document.getElementById('result').textContent = "TODO: salva valore " + val + " su GitHub (step 2)";
+    }
+  </script>
 </body>
 </html>
