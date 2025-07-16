@@ -2,89 +2,94 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Associa giorno reale al menu</title>
+  <title>Upload Menu e Giorno</title>
   <style>
     body { font-family: sans-serif; margin: 2em; }
-    label { display: block; margin-top: 1.5em; }
-    input, select, button { margin-top: 0.5em; font-size: 1em; }
+    label { font-weight: bold; }
     .result { margin-top: 1em; color: green; }
     .error { color: red; }
+    .row { margin-bottom: 1em; }
   </style>
 </head>
 <body>
-  <h1>Imposta giorno di partenza menu mensa</h1>
-
-  <form id="menuForm">
-    <label>
-      Carica il file Excel (.xlsx) del menu:
-      <input type="file" id="menuExcel" accept=".xlsx" required>
-    </label>
-
-    <label>
-      Scegli il giorno (es. lunedì 1):
-      <select id="giornoMenu" required>
-        <option value="">-- Seleziona --</option>
+  <h1>Carica Menu + imposta giorno di partenza</h1>
+  <form id="uploadForm">
+    <div class="row">
+      <label for="excel">File Excel:</label>
+      <input type="file" id="excel" name="excel" accept=".xlsx" required>
+    </div>
+    <div class="row">
+      <label for="giornoMenu">Giorno menu:</label>
+      <select id="giornoMenu" name="giornoMenu" required>
+        <option value="">-- Scegli --</option>
+        <option value="LUNEDÌ 1">LUNEDÌ 1</option>
+        <option value="MARTEDÌ 1">MARTEDÌ 1</option>
+        <option value="MERCOLEDÌ 1">MERCOLEDÌ 1</option>
+        <option value="GIOVEDÌ 1">GIOVEDÌ 1</option>
+        <option value="VENERDÌ 1">VENERDÌ 1</option>
+        <option value="LUNEDÌ 2">LUNEDÌ 2</option>
+        <option value="MARTEDÌ 2">MARTEDÌ 2</option>
+        <option value="MERCOLEDÌ 2">MERCOLEDÌ 2</option>
+        <option value="GIOVEDÌ 2">GIOVEDÌ 2</option>
+        <option value="VENERDÌ 2">VENERDÌ 2</option>
+        <option value="LUNEDÌ 3">LUNEDÌ 3</option>
+        <option value="MARTEDÌ 3">MARTEDÌ 3</option>
+        <option value="MERCOLEDÌ 3">MERCOLEDÌ 3</option>
+        <option value="GIOVEDÌ 3">GIOVEDÌ 3</option>
+        <option value="VENERDÌ 3">VENERDÌ 3</option>
+        <option value="LUNEDÌ 4">LUNEDÌ 4</option>
+        <option value="MARTEDÌ 4">MARTEDÌ 4</option>
+        <option value="MERCOLEDÌ 4">MERCOLEDÌ 4</option>
+        <option value="GIOVEDÌ 4">GIOVEDÌ 4</option>
+        <option value="VENERDÌ 4">VENERDÌ 4</option>
       </select>
-    </label>
-
-    <label>
-      Scegli la data reale corrispondente:
-      <input type="date" id="dataReale" required>
-    </label>
-
-    <button type="submit">Associa e salva</button>
+    </div>
+    <div class="row">
+      <label for="dataReale">Data reale:</label>
+      <input type="date" id="dataReale" name="dataReale" required>
+    </div>
+    <button type="submit">Carica e imposta giorno</button>
   </form>
-
   <div id="result" class="result"></div>
-
   <script>
-    // Genera tutte le combinazioni giorno-settimana per il menu mensa
-    const giorniSettimana = ["LUNEDÌ", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"];
-    const settimane = [1, 2, 3, 4];
-    const select = document.getElementById('giornoMenu');
-
-    // Popola la select
-    for (const giorno of giorniSettimana) {
-      for (const settimana of settimane) {
-        const option = document.createElement('option');
-        option.value = giorno + ' ' + settimana;
-        option.textContent = `${giorno} ${settimana}`;
-        select.appendChild(option);
-      }
-    }
-
-    document.getElementById('menuForm').addEventListener('submit', async function(e) {
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const resultDiv = document.getElementById('result');
-      const fileInput = document.getElementById('menuExcel');
+      resultDiv.textContent = 'Invio in corso...';
+      resultDiv.className = 'result';
+
+      const formData = new FormData();
+      const fileInput = document.getElementById('excel');
       const giornoMenu = document.getElementById('giornoMenu').value;
       const dataReale = document.getElementById('dataReale').value;
 
-      // Verifica input
-      if (!fileInput.files.length) {
-        resultDiv.textContent = "Seleziona un file Excel.";
-        resultDiv.className = "result error";
-        return;
-      }
-      if (!giornoMenu || !dataReale) {
+      if (!fileInput.files.length || !giornoMenu || !dataReale) {
         resultDiv.textContent = "Compila tutti i campi!";
-        resultDiv.className = "result error";
+        resultDiv.className = 'result error';
         return;
       }
 
-      // Prepara i dati da inviare
-      const file = fileInput.files[0];
-      const formData = new FormData();
-      formData.append('excel', file);
+      formData.append('excel', fileInput.files[0]);
       formData.append('giornoMenu', giornoMenu);
       formData.append('dataReale', dataReale);
 
-      // *** Qui dovresti mandare la richiesta al backend ***
-      // Esempio: fetch('URL_BACKEND', { method: 'POST', body: formData })
-
-      // Per ora solo feedback demo
-      resultDiv.textContent = `File selezionato: ${file.name}\nHai associato ${giornoMenu} alla data reale ${dataReale}`;
-      resultDiv.className = "result";
+      try {
+        const resp = await fetch('https://mensa-cc-backend-pfcmm7668-devnullccs-projects.vercel.app/api/update', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          resultDiv.textContent = "Caricamento riuscito!";
+          resultDiv.className = 'result';
+        } else {
+          resultDiv.textContent = "Errore backend: " + data.message;
+          resultDiv.className = 'result error';
+        }
+      } catch (err) {
+        resultDiv.textContent = "Errore di connessione!";
+        resultDiv.className = 'result error';
+      }
     });
   </script>
 </body>
