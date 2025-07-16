@@ -2,10 +2,90 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Test GitHub Pages</title>
+  <title>Associa giorno reale al menu</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    label { display: block; margin-top: 1.5em; }
+    input, select, button { margin-top: 0.5em; font-size: 1em; }
+    .result { margin-top: 1em; color: green; }
+    .error { color: red; }
+  </style>
 </head>
 <body>
-  <h1>Ciao, il deploy funziona!</h1>
-  <p>Questa è una pagina di test per verificare che GitHub Pages si aggiorni.</p>
+  <h1>Imposta giorno di partenza menu mensa</h1>
+
+  <form id="menuForm">
+    <label>
+      Carica il file Excel (.xlsx) del menu:
+      <input type="file" id="menuExcel" accept=".xlsx" required>
+    </label>
+
+    <label>
+      Scegli il giorno (es. lunedì 1):
+      <select id="giornoMenu" required>
+        <option value="">-- Seleziona --</option>
+      </select>
+    </label>
+
+    <label>
+      Scegli la data reale corrispondente:
+      <input type="date" id="dataReale" required>
+    </label>
+
+    <button type="submit">Associa e salva</button>
+  </form>
+
+  <div id="result" class="result"></div>
+
+  <script>
+    // Genera tutte le combinazioni giorno-settimana per il menu mensa
+    const giorniSettimana = ["LUNEDÌ", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"];
+    const settimane = [1, 2, 3, 4];
+    const select = document.getElementById('giornoMenu');
+
+    // Popola la select
+    for (const giorno of giorniSettimana) {
+      for (const settimana of settimane) {
+        const option = document.createElement('option');
+        option.value = giorno + ' ' + settimana;
+        option.textContent = `${giorno} ${settimana}`;
+        select.appendChild(option);
+      }
+    }
+
+    document.getElementById('menuForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const resultDiv = document.getElementById('result');
+      const fileInput = document.getElementById('menuExcel');
+      const giornoMenu = document.getElementById('giornoMenu').value;
+      const dataReale = document.getElementById('dataReale').value;
+
+      // Verifica input
+      if (!fileInput.files.length) {
+        resultDiv.textContent = "Seleziona un file Excel.";
+        resultDiv.className = "result error";
+        return;
+      }
+      if (!giornoMenu || !dataReale) {
+        resultDiv.textContent = "Compila tutti i campi!";
+        resultDiv.className = "result error";
+        return;
+      }
+
+      // Prepara i dati da inviare
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('excel', file);
+      formData.append('giornoMenu', giornoMenu);
+      formData.append('dataReale', dataReale);
+
+      // *** Qui dovresti mandare la richiesta al backend ***
+      // Esempio: fetch('URL_BACKEND', { method: 'POST', body: formData })
+
+      // Per ora solo feedback demo
+      resultDiv.textContent = `File selezionato: ${file.name}\nHai associato ${giornoMenu} alla data reale ${dataReale}`;
+      resultDiv.className = "result";
+    });
+  </script>
 </body>
 </html>
