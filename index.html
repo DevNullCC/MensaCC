@@ -22,7 +22,7 @@
   <hr>
   
   <form id="formDay">
-    <label for="dayStart">Giorno di partenza pubblicazione:</label>
+    <label for="dayStart">Giorno del menù di partenza:</label>
     <select id="dayStart">
       <option value="LUNEDI_1">LUNEDÌ - Settimana 1</option>
       <option value="LUNEDI_2">LUNEDÌ - Settimana 2</option>
@@ -45,6 +45,9 @@
       <option value="VENERDI_3">VENERDÌ - Settimana 3</option>
       <option value="VENERDI_4">VENERDÌ - Settimana 4</option>
     </select>
+    <br><br>
+    <label for="dateStart">Data reale corrispondente:</label>
+    <input type="date" id="dateStart" required>
     <button type="button" onclick="salvaDay()">Salva su GitHub</button>
   </form>
   
@@ -56,8 +59,14 @@
       document.getElementById('result').textContent = "TODO: upload Excel (step 2)";
     }
     function salvaDay() {
-      const val = document.getElementById('dayStart').value;
-      document.getElementById('result').textContent = "TODO: salva valore " + val + " su GitHub (step 2)";
+      const day = document.getElementById('dayStart').value;
+      const date = document.getElementById('dateStart').value;
+      if (!date) {
+        document.getElementById('result').textContent = "Seleziona una data!";
+        return;
+      }
+      document.getElementById('result').textContent =
+        "TODO: salva su GitHub: " + date + " -> " + day;
     }
   </script>
 </body>
