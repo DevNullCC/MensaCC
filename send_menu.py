@@ -104,8 +104,11 @@ d_start = datetime.strptime(data_start, "%Y-%m-%d").date()
 if os.path.exists(VIRTUAL_TODAY_PATH):
     with open(VIRTUAL_TODAY_PATH) as f:
         data_oggi = f.read().strip()
+    if not data_oggi:
+        data_oggi = data_start
 else:
     data_oggi = data_start
+
 
 d_oggi = datetime.strptime(data_oggi, "%Y-%m-%d").date()
 
