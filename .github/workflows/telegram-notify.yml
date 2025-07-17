@@ -1,15 +1,23 @@
-name: Post MensaCC to Telegram
+name: Test pubblicazione telegram ogni 10 secondi
 
 on:
-  workflow_dispatch:         # permette di lanciare a mano il workflow da Actions
   schedule:
-    - cron: '*/5 * * * *'   # ogni 5 minuti (ogni 10 non si può)
+    - cron: '*/1 * * * *'  # ogni minuto (non si può ogni 10 secondi su GitHub Actions)
+  workflow_dispatch:
 
 jobs:
-  send_message:
+  send-telegram-menu:
     runs-on: ubuntu-latest
     steps:
-      - name: Get Mess.txt and send to Telegram
-        run: |
-          MSG=$(curl -s https://raw.githubusercontent.com/DevNullCC/MensaCC/main/Mess.txt)
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" --data-urlencode "text=$MSG"
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: pip install openpyxl requests
+      - name: Run send_menu.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python send_menu.py
