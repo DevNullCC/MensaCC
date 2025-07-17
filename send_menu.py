@@ -6,24 +6,14 @@ import requests
 # === CONFIG ===
 MENU_PATH = "menu.xlsx"
 DAYSTART_PATH = "day_to_start.txt"
-VIRTUAL_TODAY_PATH = "virtual_today.txt"
-
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-
-# === FUNZIONI ===
-
-def next_workday(date):
-    d = date + timedelta(days=1)
-    while d.weekday() >= 5:  # Salta sabato e domenica
-        d += timedelta(days=1)
-    return d
 
 def giorni_lavorativi_da_a(data_inizio, data_fine):
     giorni = 0
     giorno = data_inizio
     while giorno < data_fine:
-        if giorno.weekday() < 5:
+        if giorno.weekday() < 5:  # 0=lun, 4=ven
             giorni += 1
         giorno += timedelta(days=1)
     return giorni
@@ -94,25 +84,18 @@ def estrai_menu(ws, riga_giorno, col_settimana):
         if val: menu.append(str(val))
     return menu
 
-# === 1. LEGGI GIORNO DI PARTENZA E DATA VIRTUALE ===
-
+# === LEGGI DAY_TO_START ===
 with open(DAYSTART_PATH, encoding="utf-8") as f:
     daystart = f.read().strip()
 giorno_start, data_start = [x.strip() for x in daystart.split(",")]
+
 d_start = datetime.strptime(data_start, "%Y-%m-%d").date()
+d_oggi = datetime.today().date()   # OGGI
 
-if os.path.exists(VIRTUAL_TODAY_PATH):
-    with open(VIRTUAL_TODAY_PATH) as f:
-        data_oggi = f.read().strip()
-    if not data_oggi:
-        data_oggi = data_start
-else:
-    data_oggi = data_start
-
-
-d_oggi = datetime.strptime(data_oggi, "%Y-%m-%d").date()
-
-# === 2. CALCOLA MENU DEL GIORNO VIRTUALE ===
+# Salta il weekend (solo pubblicazione giorni lavorativi)
+if d_oggi.weekday() >= 5:
+    print("Oggi è sabato/domenica, nessun menu da pubblicare.")
+    exit(0)
 
 giorni_sett = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
 g_start, sett_start = parse_giorno_settimana(giorno_start)
@@ -124,6 +107,7 @@ settimane_totali = 4
 settimana_menu = (pos_oggi // 5) % settimane_totali + 1
 giorno_menu = giorni_sett[pos_oggi % 5]
 
+# --- Estrai menu
 wb = openpyxl.load_workbook(MENU_PATH, data_only=True)
 ws = wb.active
 row_sett, intestazioni = trova_riga_col_settimane(ws)
@@ -132,10 +116,11 @@ riga_giorno = trova_blocco_per_giorno(blocchi, giorno_menu)
 col_settimana = trova_colonna_settimana(intestazioni, settimana_menu)
 menu = estrai_menu(ws, riga_giorno, col_settimana)
 
-# === 3. COMPONI MESSAGGIO E INVIA ===
+# --- Componi messaggio
 data_it = d_oggi.strftime("%d/%m/%Y")
 msg = componi_messaggio_menu(menu, giorno_menu, data_it)
 
+# --- Manda su telegram
 def send_telegram_message(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
@@ -146,9 +131,8 @@ def send_telegram_message(token, chat_id, text):
     r = requests.post(url, json=payload)
     print(r.text)
 
-send_telegram_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, msg)
-
-# === 4. AVANZA DATA VIRTUALE ===
-next_day = next_workday(d_oggi)
-with open(VIRTUAL_TODAY_PATH, "w") as f:
-    f.write(next_day.strftime("%Y-%m-%d"))
+send_telegram_message(
+    TELEGRAM_TOKEN,
+    TELEGRAM_CHAT_ID,
+    msg
+)
