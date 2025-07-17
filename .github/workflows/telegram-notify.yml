@@ -1,8 +1,8 @@
-name: Test pubblicazione telegram ogni minuto
+name: Pubblica menu Telegram ogni giorno
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # ogni minuto
+    - cron: '0 6 * * 1-5'  # Alle 08:00 ora italiana, lunedì-venerdì (1-5)
   workflow_dispatch:
 
 jobs:
@@ -21,10 +21,3 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python send_menu.py
-      - name: Commit virtual_today.txt
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git add virtual_today.txt
-          git commit -m "Avanza giorno virtuale" || echo "No changes"
-          git push
