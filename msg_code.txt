@@ -1,7 +1,7 @@
 import openpyxl
 from datetime import datetime, timedelta
 
-# === CONFIGURAZIONE UTENTE ===
+# === CONFIGURAZIONE UTENTE ====
 excel_path = r"C:\Users\48077\Desktop\Appoggio\New folder\Menu.xlsx"
 giorno_start = "LUNEDI 1"      # ad es: "GIOVEDÌ 3"
 data_start = "2025-06-23"
