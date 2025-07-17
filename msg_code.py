@@ -1,0 +1,151 @@
+import openpyxl
+from datetime import datetime, timedelta
+
+# === CONFIGURAZIONE UTENTE ===
+excel_path = r"C:\Users\48077\Desktop\Appoggio\New folder\Menu.xlsx"
+giorno_start = "LUNEDI 1"      # ad es: "GIOVEDÌ 3"
+data_start = "2025-06-23"
+data_oggi = "2025-07-17"       # simulazione
+
+# --- FUNZIONI ---
+def trova_riga_col_settimane(ws):
+    for row in ws.iter_rows(min_row=1, max_row=15):
+        valori = [str(cell.value).upper() if cell.value else "" for cell in row]
+        if any("SETTIMANA" in v for v in valori):
+            return row, valori
+    raise ValueError("Non trovata riga settimane!")
+
+def trova_blocchi_giorni(ws):
+    giorni = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
+    blocchi = []
+    for i, row in enumerate(ws.iter_rows(min_row=1, values_only=True)):
+        prima_col = str(row[0]).upper() if row[0] else ""
+        if prima_col in giorni:
+            blocchi.append( (prima_col, i+1) ) # i+1 = numero riga reale (openpyxl)
+    return blocchi
+
+def trova_colonna_settimana(intestazioni, settimana_n):
+    # cerca "SETTIMANA X"
+    for idx, v in enumerate(intestazioni):
+        if v.strip().upper() == f"SETTIMANA {settimana_n}":
+            return idx
+    raise ValueError("Settimana non trovata")
+
+def trova_blocco_per_giorno(blocchi, giorno):
+    for nome, riga in blocchi:
+        if nome == giorno:
+            return riga
+    raise ValueError("Giorno non trovato")
+
+def estrai_menu(ws, riga_giorno, col_settimana):
+    # Prendi il blocco: da riga_giorno alle successive 8 (menu=9 righe per giorno)
+    menu = []
+    for r in range(riga_giorno, riga_giorno + 9):
+        val = ws.cell(row=r, column=col_settimana+1).value
+        if val: menu.append(str(val))
+    return menu
+
+from datetime import date, timedelta
+
+
+def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
+    """
+    menu_del_giorno: lista di 9 voci
+    giorno_settimana: ad es 'GIOVEDÌ'
+    data_it: stringa '17/07/2025'
+    """
+    msg = (
+        f"Buongiorno e buon lavoro.\n\n"
+        f"🧑‍🍳 *Menù del giorno* ({giorno_settimana.title()} {data_it})\n\n"
+        f"*[Primi]*\n"
+        f"{menu_del_giorno[0]}.\n"
+        f"{menu_del_giorno[1]}.\n"
+        f"{menu_del_giorno[2]}.\n"
+        f"[Pasta o riso in bianco/pomodoro]\n\n"
+        f"*[Secondi]*\n"
+        f"{menu_del_giorno[3]}.\n"
+        f"{menu_del_giorno[4]}.\n"
+        f"{menu_del_giorno[5]}.\n"
+        f"[Pizza gusti del giorno]\n\n"
+        f"*[Contorni]*\n"
+        f"{menu_del_giorno[8]}.\n\n"
+        f"Buon appetito dalla Commissione mensa.\n👋"
+    )
+    return msg
+
+
+
+def giorni_lavorativi_da_a(data_inizio, data_fine):
+    """
+    Conta i giorni lavorativi (lun-ven) tra due date incluse.
+    """
+    
+    
+    giorni = 0
+    giorno = data_inizio
+    while giorno < data_fine:
+        if giorno.weekday() < 5:   # 0 = lunedì, 4 = venerdì
+            giorni += 1
+        giorno += timedelta(days=1)
+    return giorni
+
+
+# --- CARICAMENTO FILE ---
+wb = openpyxl.load_workbook(excel_path, data_only=True)
+ws = wb.active
+
+# 1. Trova intestazione SETTIMANA e la riga
+row_sett, intestazioni = trova_riga_col_settimane(ws)
+
+# 2. Trova blocchi dei giorni (dove inizia LUNEDI, MARTEDÌ, ...)
+blocchi = trova_blocchi_giorni(ws)
+
+
+
+giorni_sett = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
+
+def parse_giorno_settimana(s):
+    for g in giorni_sett:
+        if s.startswith(g):
+            n = int(s.replace(g, "").strip())
+            return g, n
+    raise ValueError("Formato giorno_settimana errato")
+
+g_start, sett_start = parse_giorno_settimana(giorno_start)
+d_start = datetime.strptime(data_start, "%Y-%m-%d").date()
+d_oggi = datetime.strptime(data_oggi, "%Y-%m-%d").date()
+
+# Indice del giorno della settimana (0=lunedi, 4=ven)
+idx_giorno_start = giorni_sett.index(g_start)
+
+# Conta solo i giorni lavorativi effettivi tra data_start e data_oggi
+delta_days = giorni_lavorativi_da_a(d_start, d_oggi)
+
+# Posizione di partenza assoluta nella sequenza (lun 1 = 0, mar 1 = 1, ... ven 4 = 19)
+pos_start = (sett_start - 1) * 5 + idx_giorno_start
+pos_oggi = pos_start + delta_days
+
+settimane_totali = 4  # quante settimane ci sono nel menu (modifica se cambia)
+settimana_menu = (pos_oggi // 5) % settimane_totali + 1
+giorno_menu = giorni_sett[pos_oggi % 5]
+
+print(f"Data reale: {data_oggi}")
+print(f"Corrisponde a: {giorno_menu} settimana {settimana_menu}")
+
+
+# 4. Estrai menu
+riga_giorno = trova_blocco_per_giorno(blocchi, giorno_menu)
+col_settimana = trova_colonna_settimana(intestazioni, settimana_menu)
+menu = estrai_menu(ws, riga_giorno, col_settimana)
+# print("\nMenu del giorno:")
+# for piatto in menu:
+#     print("-", piatto)
+
+# Conversione data in formato italiano
+data_it = datetime.strptime(data_oggi, "%Y-%m-%d").strftime("%d/%m/%Y")
+
+# Componi il messaggio finale
+messaggio = componi_messaggio_menu(menu, giorno_menu, data_it)
+print("\n--- Messaggio da pubblicare ---\n")
+print(messaggio)
+
