@@ -48,6 +48,31 @@ def estrai_menu(ws, riga_giorno, col_settimana):
 from datetime import date, timedelta
 
 
+# def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
+#     """
+#     menu_del_giorno: lista di 9 voci
+#     giorno_settimana: ad es 'GIOVEDÌ'
+#     data_it: stringa '17/07/2025'
+#     """
+#     msg = (
+#         f"Buongiorno e buon lavoro.\n\n"
+#         f"🧑‍🍳 *Menù del giorno* ({giorno_settimana.title()} {data_it})\n\n"
+#         f"*[Primi]*\n"
+#         f"{menu_del_giorno[0]}.\n"
+#         f"{menu_del_giorno[1]}.\n"
+#         f"{menu_del_giorno[2]}.\n"
+#         f"[Pasta o riso in bianco/pomodoro]\n\n"
+#         f"*[Secondi]*\n"
+#         f"{menu_del_giorno[3]}.\n"
+#         f"{menu_del_giorno[4]}.\n"
+#         f"{menu_del_giorno[5]}.\n"
+#         f"[Pizza gusti del giorno]\n\n"
+#         f"*[Contorni]*\n"
+#         f"{menu_del_giorno[8]}.\n\n"
+#         f"Buon appetito dalla Commissione mensa.\n👋"
+#     )
+#     return msg
+
 def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
     """
     menu_del_giorno: lista di 9 voci
@@ -65,14 +90,16 @@ def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
         f"*[Secondi]*\n"
         f"{menu_del_giorno[3]}.\n"
         f"{menu_del_giorno[4]}.\n"
-        f"{menu_del_giorno[5]}.\n"
-        f"[Pizza gusti del giorno]\n\n"
+        f"{menu_del_giorno[5]}.\n\n"
+        f"*[Pizza gusti del giorno]*\n"
+        f"{menu_del_giorno[6]}.\n\n"
+        f"*[Carni o extra]*\n"
+        f"{menu_del_giorno[7]}.\n\n"
         f"*[Contorni]*\n"
         f"{menu_del_giorno[8]}.\n\n"
         f"Buon appetito dalla Commissione mensa.\n👋"
     )
     return msg
-
 
 
 def giorni_lavorativi_da_a(data_inizio, data_fine):
