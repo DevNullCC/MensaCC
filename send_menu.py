@@ -26,18 +26,15 @@ def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
         f"{menu_del_giorno[0]}.\n"
         f"{menu_del_giorno[1]}.\n"
         f"{menu_del_giorno[2]}.\n"
-        f"[Pasta o riso in bianco/pomodoro]\n\n"
+        f"*[Pasta o riso in bianco/pomodoro]*\n"
         f"*[Secondi]*\n"
         f"{menu_del_giorno[3]}.\n"
         f"{menu_del_giorno[4]}.\n"
-        f"{menu_del_giorno[5]}.\n\n"
+        f"{menu_del_giorno[5]}.\n"
         f"*[Pizza gusti del giorno]*\n"
-        f"{menu_del_giorno[6]}.\n\n"
-        f"*[Carni o extra]*\n"
-        f"{menu_del_giorno[7]}.\n\n"
         f"*[Contorni]*\n"
-        f"{menu_del_giorno[8]}.\n\n"
-        f"Buon appetito dalla Commissione mensa.\n👋"
+        f"{menu_del_giorno[6]}.\n"       
+        f"\nBuon appetito dalla Commissione mensa.\n👋"
     )
     return msg
 
@@ -79,7 +76,8 @@ def trova_blocco_per_giorno(blocchi, giorno):
 
 def estrai_menu(ws, riga_giorno, col_settimana):
     menu = []
-    for r in range(riga_giorno, riga_giorno + 9):
+    NUM_VOCI_MENU = 7
+    for r in range(riga_giorno, riga_giorno + NUM_VOCI_MENU):
         val = ws.cell(row=r, column=col_settimana+1).value
         if val: menu.append(str(val))
     return menu
@@ -109,7 +107,7 @@ giorno_menu = giorni_sett[pos_oggi % 5]
 
 # --- Estrai menu
 wb = openpyxl.load_workbook(MENU_PATH, data_only=True)
-ws = wb.active
+ws = wb.worksheets[0]  # Primo foglio del file Excel
 row_sett, intestazioni = trova_riga_col_settimane(ws)
 blocchi = trova_blocchi_giorni(ws)
 riga_giorno = trova_blocco_per_giorno(blocchi, giorno_menu)
