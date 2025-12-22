@@ -9,6 +9,38 @@ DAYSTART_PATH = "day_to_start.txt"
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+from datetime import date
+
+# === DATE DA ESCLUDERE (MODIFICA QUI) ===
+# - Giorni singoli: "YYYY-MM-DD"
+# - Range inclusivi: ("YYYY-MM-DD", "YYYY-MM-DD")
+# - Range aperti: (None, "YYYY-MM-DD") oppure ("YYYY-MM-DD", None)
+EXCLUDED_DATES = [
+    #"2025-12-24",
+     ("2025-12-24", "2026-01-06")
+    # (None, "2026-01-06"),
+    # ("2025-12-27", None),
+]
+
+def _parse_iso_date(s: str) -> date:
+    return datetime.strptime(s, "%Y-%m-%d").date()
+
+def is_excluded(d: date) -> bool:
+    for item in EXCLUDED_DATES:
+        # giorno singolo
+        if isinstance(item, str):
+            if _parse_iso_date(item) == d:
+                return True
+        # range
+        else:
+            start_s, end_s = item
+            start = _parse_iso_date(start_s) if start_s else date.min
+            end = _parse_iso_date(end_s) if end_s else date.max
+            if start <= d <= end:
+                return True
+    return False
+
+
 def giorni_lavorativi_da_a(data_inizio, data_fine):
     giorni = 0
     giorno = data_inizio
@@ -89,6 +121,11 @@ giorno_start, data_start = [x.strip() for x in daystart.split(",")]
 
 d_start = datetime.strptime(data_start, "%Y-%m-%d").date()
 d_oggi = datetime.today().date()   # OGGI
+
+# Salta se la data è esclusa
+if is_excluded(d_oggi):
+    print(f"Oggi {d_oggi} è escluso (EXCLUDED_DATES). Nessun menu da pubblicare.")
+    exit(0)
 
 # Salta il weekend (solo pubblicazione giorni lavorativi)
 if d_oggi.weekday() >= 5:
