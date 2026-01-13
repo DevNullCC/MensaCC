@@ -45,7 +45,7 @@ def giorni_lavorativi_da_a(data_inizio, data_fine):
     giorni = 0
     giorno = data_inizio
     while giorno < data_fine:
-        'if giorno.weekday() < 5:  # 0=lun, 4=ven
+        #if giorno.weekday() < 5:  # 0=lun, 4=ven
         if giorno.weekday() < 5 and not is_excluded(giorno):
             giorni += 1
         giorno += timedelta(days=1)
