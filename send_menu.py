@@ -2,6 +2,7 @@ import openpyxl
 from datetime import datetime, timedelta
 import os
 import requests
+import re
 
 # === CONFIG ===
 MENU_PATH = "menu.xlsx"
@@ -79,12 +80,40 @@ def parse_giorno_settimana(s):
             return g, n
     raise ValueError("Formato giorno_settimana errato")
 
+
+
 def trova_riga_col_settimane(ws):
-    for row in ws.iter_rows(min_row=1, max_row=15):
-        valori = [str(cell.value).upper() if cell.value else "" for cell in row]
-        if any("SETTIMANA" in v for v in valori):
-            return row, valori
-    raise ValueError("Non trovata riga settimane!")
+    """
+    Cerca la riga che contiene le intestazioni SETTIMANA 1..4.
+    Evita righe tipo titolo con "prima settimana".
+    """
+    best_row = None
+    best_vals = None
+    best_score = 0
+
+    # cerca un po' più in basso del titolo (ma puoi lasciare ampio)
+    for row in ws.iter_rows(min_row=1, max_row=30):
+        vals = []
+        score = 0
+        for cell in row:
+            v = cell.value
+            s = str(v).strip().upper() if v is not None else ""
+            vals.append(s)
+
+            # match SOLO "SETTIMANA <numero>" (non "PRIMA SETTIMANA")
+            if re.search(r"\bSETTIMANA\s*\d+\b", s):
+                score += 1
+
+        # vogliamo una riga con almeno 2 match (tipicamente 4)
+        if score > best_score:
+            best_score = score
+            best_row = row
+            best_vals = vals
+
+    if best_score >= 2:
+        return best_row, best_vals
+
+    raise ValueError("Non trovata riga intestazioni SETTIMANA 1..N (score insufficiente).")
 
 def trova_blocchi_giorni(ws):
     giorni = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
@@ -95,11 +124,38 @@ def trova_blocchi_giorni(ws):
             blocchi.append( (prima_col, i+1) )
     return blocchi
 
+#def trova_colonna_settimana(intestazioni, settimana_n):
+#    for idx, v in enumerate(intestazioni):
+#        if v.strip().upper() == f"SETTIMANA {settimana_n}":
+#            return idx
+#    raise ValueError("Settimana non trovata")
+
+import re
+
+def _norm(s: str) -> str:
+    # normalizza spazi, maiuscole, e caratteri strani
+    return re.sub(r"\s+", " ", str(s).strip().upper())
+
 def trova_colonna_settimana(intestazioni, settimana_n):
+    target = f"SETTIMANA {settimana_n}"
+    target_n = _norm(target)
+
+    # 1) match esatto normalizzato
     for idx, v in enumerate(intestazioni):
-        if v.strip().upper() == f"SETTIMANA {settimana_n}":
+        if _norm(v) == target_n:
             return idx
-    raise ValueError("Settimana non trovata")
+
+    # 2) match "contiene" (es. "SETTIMANA 1 - INVERNO")
+    for idx, v in enumerate(intestazioni):
+        if target_n in _norm(v):
+            return idx
+
+    # 3) debug utile: stampa cosa ha trovato davvero
+    raise ValueError(
+        f"Settimana non trovata: '{target}'. Intestazioni disponibili: "
+        + " | ".join([_norm(x) for x in intestazioni if _norm(x)])
+    )
+
 
 def trova_blocco_per_giorno(blocchi, giorno):
     for nome, riga in blocchi:
