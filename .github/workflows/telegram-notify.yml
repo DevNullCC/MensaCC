@@ -2,8 +2,8 @@ name: Pubblica menu Telegram ogni giorno
 
 on:
   schedule:
-    - cron: '7 10 * * 1-5'  # Alle 10:07 ora italiana, lunedì-venerdì
-      timezone: "Europe/Rome"
+    - cron: '7 10 * * 1-5'
+      timezone: 'Europe/Rome'
   workflow_dispatch:
 
 jobs:
@@ -11,12 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: '3.11'
+
       - name: Install dependencies
         run: pip install openpyxl requests
+
       - name: Run send_menu.py
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
