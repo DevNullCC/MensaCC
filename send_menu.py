@@ -1,5 +1,6 @@
 import openpyxl
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from zoneinfo import ZoneInfo
 import os
 import requests
 import re
@@ -9,8 +10,13 @@ MENU_PATH = "menu.xlsx"
 DAYSTART_PATH = "day_to_start.txt"
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+APP_TZ = ZoneInfo(os.getenv("APP_TZ", "Europe/Rome"))
 
-from datetime import date
+# Opzionali, utili per test manuali/locali senza cambiare codice
+TEST_TODAY = os.getenv("TEST_TODAY", "").strip()  # es. "2026-05-04"
+DEBUG = os.getenv("DEBUG", "0") == "1"
+DRY_RUN = os.getenv("DRY_RUN", "0") == "1"
+
 
 # === DATE DA ESCLUDERE (MODIFICA QUI) ===
 # - Giorni singoli: "YYYY-MM-DD"
@@ -29,6 +35,11 @@ EXCLUDED_DATES = [
 
 def _parse_iso_date(s: str) -> date:
     return datetime.strptime(s, "%Y-%m-%d").date()
+
+def get_today() -> date:
+    if TEST_TODAY:
+        return _parse_iso_date(TEST_TODAY)
+    return datetime.now(APP_TZ).date()
 
 def is_excluded(d: date) -> bool:
     for item in EXCLUDED_DATES:
@@ -181,7 +192,8 @@ with open(DAYSTART_PATH, encoding="utf-8") as f:
 giorno_start, data_start = [x.strip() for x in daystart.split(",")]
 
 d_start = datetime.strptime(data_start, "%Y-%m-%d").date()
-d_oggi = datetime.today().date()   # OGGI
+#d_oggi = datetime.today().date()   # OGGI
+d_oggi = get_today()  # OGGI in Europe/Rome
 
 # Salta se la data è esclusa
 if is_excluded(d_oggi):
@@ -202,6 +214,19 @@ pos_oggi = pos_start + delta_days
 settimane_totali = 4
 settimana_menu = (pos_oggi // 5) % settimane_totali + 1
 giorno_menu = giorni_sett[pos_oggi % 5]
+if DEBUG:
+    print("=== DEBUG MENSA ===")
+    print("timezone:", APP_TZ)
+    print("now:", datetime.now(APP_TZ).isoformat())
+    print("day_to_start:", daystart)
+    print("d_start:", d_start)
+    print("d_oggi:", d_oggi, "weekday:", d_oggi.weekday())
+    print("delta_days:", delta_days)
+    print("pos_start:", pos_start)
+    print("pos_oggi:", pos_oggi)
+    print("settimana_menu:", settimana_menu)
+    print("giorno_menu:", giorno_menu)
+    print("===================")
 
 # --- Estrai menu
 wb = openpyxl.load_workbook(MENU_PATH, data_only=True)
@@ -227,8 +252,18 @@ def send_telegram_message(token, chat_id, text):
     r = requests.post(url, json=payload)
     print(r.text)
 
-send_telegram_message(
-    TELEGRAM_TOKEN,
-    TELEGRAM_CHAT_ID,
-    msg
-)
+#send_telegram_message(
+#    TELEGRAM_TOKEN,
+#    TELEGRAM_CHAT_ID,
+#    msg
+#)
+if DRY_RUN:
+    print("DRY_RUN=1: non invio su Telegram.")
+    print("\n=== MESSAGGIO ===\n")
+    print(msg)
+else:
+    send_telegram_message(
+        TELEGRAM_TOKEN,
+        TELEGRAM_CHAT_ID,
+        msg
+    )
