@@ -2,7 +2,7 @@ name: Pubblica menu Telegram ogni giorno
 
 on:
   schedule:
-    - cron: '7 10 * * 1-5'
+    - cron: '17 10 * * 1-5'
       timezone: 'Europe/Rome'
   workflow_dispatch:
 
