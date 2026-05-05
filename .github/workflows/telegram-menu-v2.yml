@@ -1,4 +1,4 @@
-name: Pubblica menu Telegram ogni giorno
+name: Pubblica menu Telegram ogni giorno v2
 
 on:
   schedule:
