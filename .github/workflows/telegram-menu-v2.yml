@@ -1,32 +1,14 @@
-name: Pubblica menu Telegram ogni giorno v2
+name: Pubblica menu Telegram ogni giorno
 
 on:
   schedule:
-    - cron: '17 10 * * 1-5'
+    - cron: '7 10 * * 1-5'
       timezone: 'Europe/Rome'
-
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Test senza inviare Telegram'
-        required: true
-        default: true
-        type: boolean
-      test_today:
-        description: 'Data test opzionale, formato YYYY-MM-DD'
-        required: false
-        type: string
 
 jobs:
   send-telegram-menu:
     runs-on: ubuntu-latest
-
-    env:
-      TZ: Europe/Rome
-      APP_TZ: Europe/Rome
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
-      DEBUG: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
-      TEST_TODAY: ${{ github.event_name == 'workflow_dispatch' && inputs.test_today || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -43,4 +25,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          APP_TZ: Europe/Rome
         run: python send_menu.py
