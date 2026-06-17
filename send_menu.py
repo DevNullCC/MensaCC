@@ -241,15 +241,47 @@ data_it = d_oggi.strftime("%d/%m/%Y")
 msg = componi_messaggio_menu(menu, giorno_menu, data_it)
 
 # --- Manda su telegram
+#def send_telegram_message(token, chat_id, text):
+  #  url = f"https://api.telegram.org/bot{token}/sendMessage"
+  #  payload = {
+  #      "chat_id": chat_id,
+  #      "text": text,
+  #      "parse_mode": "Markdown"
+  #  }
+ #   r = requests.post(url, json=payload)
+ #   print(r.text)
+
 def send_telegram_message(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+
     payload = {
         "chat_id": chat_id,
         "text": text,
-        "parse_mode": "Markdown"
+        "parse_mode": "Markdown",
     }
-    r = requests.post(url, json=payload)
-    print(r.text)
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
+        result = response.json()
+
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            f"Errore durante la chiamata a Telegram: {exc}"
+        ) from exc
+
+    if not result.get("ok"):
+        raise RuntimeError(
+            f"Telegram ha rifiutato il messaggio: {result}"
+        )
+
+    message_id = result.get("result", {}).get("message_id")
+    print(f"Messaggio Telegram inviato correttamente. message_id={message_id}")
+
 
 #send_telegram_message(
 #    TELEGRAM_TOKEN,
