@@ -1,0 +1,114 @@
+name: Richiesta pubblica invio menu
+
+on:
+  issues:
+    types: [opened]
+
+# Questo workflow NON legge i secret Telegram.
+# Può soltanto decidere se la richiesta pubblica è ammissibile,
+# avviare il workflow principale e chiudere la Issue usata come pulsante.
+permissions:
+  actions: write
+  issues: write
+  contents: read
+
+jobs:
+  dispatch-menu:
+    # Accetta solo la Issue creata dal pulsante della Pages.
+    # Titolo e body non vengono mai eseguiti in una shell.
+    if: >-
+      ${{
+        github.event.issue.title == '[MensaCC] Invia menu Telegram' &&
+        contains(github.event.issue.body, 'MENSACC_PUBLIC_TRIGGER_V1')
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ora italiana e finestra utile
+        id: window
+        shell: bash
+        run: |
+          local_date="$(TZ=Europe/Rome date +%F)"
+          hour="$(TZ=Europe/Rome date +%H)"
+          minute="$(TZ=Europe/Rome date +%M)"
+          weekday="$(TZ=Europe/Rome date +%u)"
+          minutes_since_midnight=$((10#$hour * 60 + 10#$minute))
+
+          echo "date=$local_date" >> "$GITHUB_OUTPUT"
+
+          # 09:55 = 595 minuti; 12:45 = 765 minuti.
+          if [ "$weekday" -ge 1 ] && [ "$weekday" -le 5 ] && \
+             [ "$minutes_since_midnight" -ge 595 ] && \
+             [ "$minutes_since_midnight" -le 765 ]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Controlla se il menu è già stato inviato oggi
+        id: sent-marker
+        if: steps.window.outputs.allowed == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .send-state
+          key: telegram-menu-sent-${{ steps.window.outputs.date }}
+
+      - name: Avvia il workflow principale
+        id: dispatch
+        if: >-
+          ${{
+            steps.window.outputs.allowed == 'true' &&
+            steps.sent-marker.outputs.cache-hit != 'true'
+          }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "/repos/${{ github.repository }}/actions/workflows/telegram-menu-v2.yml/dispatches" \
+            -f ref='main' \
+            -f 'inputs[source]=public' \
+            -f 'inputs[force]=false'
+
+      - name: Chiudi richiesta - inoltrata
+        if: steps.dispatch.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue close "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --comment "Richiesta inoltrata al workflow principale. L'invio Telegram resta protetto contro i duplicati e viene effettuato solo nella finestra 09:55-12:45 Europe/Rome."
+
+      - name: Chiudi richiesta - già inviato
+        if: >-
+          ${{
+            steps.window.outputs.allowed == 'true' &&
+            steps.sent-marker.outputs.cache-hit == 'true'
+          }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue close "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --comment "Il menu risulta già inviato oggi: nessun nuovo invio è stato avviato."
+
+      - name: Chiudi richiesta - fuori finestra
+        if: steps.window.outputs.allowed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue close "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --comment "Richiesta ricevuta fuori dalla finestra utile (09:55-12:45, lunedì-venerdì, Europe/Rome): nessun invio è stato avviato."
+
+      - name: Chiudi richiesta - errore di inoltro
+        if: failure() && steps.window.outputs.allowed == 'true' && steps.sent-marker.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue close "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --comment "Non è stato possibile inoltrare la richiesta al workflow principale."
