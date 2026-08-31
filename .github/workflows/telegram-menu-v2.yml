@@ -2,16 +2,45 @@ name: Pubblica menu Telegram ogni giorno
 
 on:
   schedule:
-    - cron: '1 7 * * 1-5'
-      timezone: 'Europe/Rome'
+    # GitHub interpreta questi cron in UTC.
+    # Evitiamo intenzionalmente `timezone:`.
+    #
+    # 07:55 UTC:
+    #   - 09:55 in Italia con ora legale (CEST)
+    #   - 08:55 in Italia con ora solare (CET) -> send_menu.py lo scarta
+    #
+    # 08:55 UTC:
+    #   - 10:55 in Italia con ora legale (CEST) -> normalmente già inviato
+    #   - 09:55 in Italia con ora solare (CET)
+    #
+    # In questo modo uno dei due tentativi cade sempre alle 09:55 italiane.
+    # Se GitHub ritarda il run, send_menu.py accetta l'invio fino alle 12:45.
+    - cron: '55 7,8 * * 1-5'
+
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forza un nuovo invio anche se il menu è già stato inviato oggi'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Evita che due tentativi (automatici o manuali) inviino contemporaneamente.
+concurrency:
+  group: mensacc-telegram-menu
+  cancel-in-progress: false
 
 jobs:
   send-telegram-menu:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -21,9 +50,32 @@ jobs:
       - name: Install dependencies
         run: pip install openpyxl requests
 
+      - name: Data italiana corrente
+        id: local-date
+        shell: bash
+        run: echo "date=$(TZ=Europe/Rome date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Controlla se il menu è già stato inviato oggi
+        id: sent-marker
+        uses: actions/cache/restore@v4
+        with:
+          path: .send-state
+          key: telegram-menu-sent-${{ steps.local-date.outputs.date }}
+
       - name: Run send_menu.py
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           APP_TZ: Europe/Rome
+          RUN_MODE: ${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }}
+          FORCE_SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '0' }}
+          ALREADY_SENT: ${{ steps.sent-marker.outputs.cache-hit || 'false' }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: python send_menu.py
+
+      - name: Registra l'invio di oggi
+        if: ${{ success() && hashFiles('.send-state/sent.json') != '' && steps.sent-marker.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .send-state
+          key: telegram-menu-sent-${{ steps.local-date.outputs.date }}
