@@ -25,7 +25,8 @@ DEBUG = os.getenv("DEBUG", "0") == "1"
 DRY_RUN = os.getenv("DRY_RUN", "0") == "1"
 
 # Valori impostati dal workflow GitHub Actions
-RUN_MODE = os.getenv("RUN_MODE", "manual").strip().lower()
+EVENT_NAME = os.getenv("EVENT_NAME", "workflow_dispatch").strip().lower()
+REQUEST_SOURCE = os.getenv("REQUEST_SOURCE", "admin").strip().lower()
 FORCE_SEND = os.getenv("FORCE_SEND", "0") == "1"
 ALREADY_SENT = os.getenv("ALREADY_SENT", "false").strip().lower() == "true"
 GITHUB_RUN_ID = os.getenv("GITHUB_RUN_ID", "").strip()
@@ -90,18 +91,21 @@ def stop_if_already_sent() -> None:
         raise SystemExit(0)
 
 
-def wait_for_scheduled_send_time() -> None:
+def enforce_send_window() -> None:
     """
-    Per i run automatici:
-    - usa sempre Europe/Rome;
-    - accetta i tentativi validi a partire dalle 09:55 italiane;
-    - se GitHub parte tra le 09:55 e le 10:00, aspetta le 10:00;
-    - se GitHub è in ritardo, invia appena parte fino alle 12:45 incluse;
-    - dalle 12:46 in poi non pubblica più.
+    Applica la finestra utile a tutti gli invii normali:
+    - 09:55-09:59 Europe/Rome: il runner aspetta le 10:00;
+    - 10:00-12:45: invia appena il workflow parte;
+    - prima delle 09:55 o dalle 12:46: nessun invio.
 
-    I run manuali non sono soggetti a questo controllo.
+    L'unica eccezione è un workflow_dispatch amministrativo con force=true,
+    utile per emergenze/test intenzionali. Il trigger pubblico non può impostarlo.
     """
-    if RUN_MODE != "scheduled" or TEST_TODAY:
+    if TEST_TODAY:
+        return
+
+    if EVENT_NAME == "workflow_dispatch" and REQUEST_SOURCE == "admin" and FORCE_SEND:
+        print("Invio amministrativo forzato: controllo orario bypassato.")
         return
 
     now = datetime.now(APP_TZ)
@@ -120,7 +124,10 @@ def wait_for_scheduled_send_time() -> None:
         microsecond=0,
     )
 
-    print(f"Run automatico ricevuto alle {now.isoformat()}.")
+    print(
+        f"Richiesta ricevuta alle {now.isoformat()} "
+        f"(event={EVENT_NAME}, source={REQUEST_SOURCE})."
+    )
     print(
         "Finestra valida in Europe/Rome: "
         f"{earliest.isoformat()} -> 12:45:59."
@@ -128,14 +135,14 @@ def wait_for_scheduled_send_time() -> None:
 
     if now < earliest:
         print(
-            "Run UTC non corrispondente al fuso Europe/Rome corrente: "
-            "è troppo presto. Nessun invio."
+            "Richiesta arrivata prima della finestra utile (09:55 Europe/Rome). "
+            "Nessun invio."
         )
         raise SystemExit(0)
 
     if now >= cutoff_exclusive:
         print(
-            "Run schedulato arrivato dopo le 12:45 italiane. "
+            "Richiesta arrivata dopo le 12:45 italiane. "
             "A quest'ora il menu non è più utile: nessun invio."
         )
         raise SystemExit(0)
@@ -310,7 +317,8 @@ def write_sent_marker(d_oggi: date, message_id) -> None:
     state = {
         "date": d_oggi.isoformat(),
         "sent_at": datetime.now(APP_TZ).isoformat(),
-        "mode": RUN_MODE,
+        "event_name": EVENT_NAME,
+        "request_source": REQUEST_SOURCE,
         "message_id": message_id,
         "github_run_id": GITHUB_RUN_ID or None,
     }
@@ -324,7 +332,7 @@ def write_sent_marker(d_oggi: date, message_id) -> None:
 
 # === AVVIO ===
 stop_if_already_sent()
-wait_for_scheduled_send_time()
+enforce_send_window()
 
 # === LEGGI DAY_TO_START ===
 with open(DAYSTART_PATH, encoding="utf-8") as f:
@@ -361,7 +369,8 @@ if DEBUG:
     print("=== DEBUG MENSA ===")
     print("timezone:", APP_TZ)
     print("now:", datetime.now(APP_TZ).isoformat())
-    print("run_mode:", RUN_MODE)
+    print("event_name:", EVENT_NAME)
+    print("request_source:", REQUEST_SOURCE)
     print("force_send:", FORCE_SEND)
     print("already_sent:", ALREADY_SENT)
     print("day_to_start:", daystart)
