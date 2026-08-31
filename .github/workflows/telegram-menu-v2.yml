@@ -13,14 +13,22 @@ on:
     #   - 10:55 in Italia con ora legale (CEST) -> normalmente già inviato
     #   - 09:55 in Italia con ora solare (CET)
     #
-    # In questo modo uno dei due tentativi cade sempre alle 09:55 italiane.
-    # Se GitHub ritarda il run, send_menu.py accetta l'invio fino alle 12:45.
+    # Uno dei due tentativi cade quindi sempre alle 09:55 italiane.
+    # Se GitHub ritarda il run, l'invio resta valido fino alle 12:45.
     - cron: '55 7,8 * * 1-5'
 
   workflow_dispatch:
     inputs:
+      source:
+        description: 'Origine della richiesta'
+        required: false
+        default: admin
+        type: choice
+        options:
+          - admin
+          - public
       force:
-        description: 'Forza un nuovo invio anche se il menu è già stato inviato oggi'
+        description: 'Forza invio amministrativo anche fuori orario o se già inviato'
         required: false
         default: false
         type: boolean
@@ -28,7 +36,7 @@ on:
 permissions:
   contents: read
 
-# Evita che due tentativi (automatici o manuali) inviino contemporaneamente.
+# Tutti i tentativi vengono serializzati: niente corse fra cron e manuale.
 concurrency:
   group: mensacc-telegram-menu
   cancel-in-progress: false
@@ -67,7 +75,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           APP_TZ: Europe/Rome
-          RUN_MODE: ${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUEST_SOURCE: ${{ github.event_name == 'workflow_dispatch' && inputs.source || 'scheduled' }}
           FORCE_SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '0' }}
           ALREADY_SENT: ${{ steps.sent-marker.outputs.cache-hit || 'false' }}
           GITHUB_RUN_ID: ${{ github.run_id }}
