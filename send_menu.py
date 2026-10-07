@@ -190,13 +190,20 @@ def componi_messaggio_menu(menu_del_giorno, giorno_settimana, data_it):
     return msg
 
 
+def _norm_giorno(s: str) -> str:
+    s = str(s).strip().upper()
+    return s.replace("À", "A").replace("È", "E").replace("É", "E").replace("Ì", "I").replace("Ò", "O").replace("Ù", "U")
+
+
 def parse_giorno_settimana(s):
     giorni_sett = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
+    s_norm = _norm_giorno(s)
     for g in giorni_sett:
-        if s.startswith(g):
-            n = int(s.replace(g, "").strip())
+        g_norm = _norm_giorno(g)
+        if s_norm.startswith(g_norm):
+            n = int(s_norm.replace(g_norm, "").strip())
             return g, n
-    raise ValueError("Formato giorno_settimana errato")
+    raise ValueError(f"Formato giorno_settimana errato: {s}")
 
 
 def trova_riga_col_settimane(ws):
@@ -234,12 +241,14 @@ def trova_riga_col_settimane(ws):
 
 def trova_blocchi_giorni(ws):
     giorni = ["LUNEDI", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ"]
+    giorni_norm = [_norm_giorno(g) for g in giorni]
     blocchi = []
 
     for i, row in enumerate(ws.iter_rows(min_row=1, values_only=True)):
-        prima_col = str(row[0]).upper() if row[0] else ""
-        if prima_col in giorni:
-            blocchi.append((prima_col, i + 1))
+        prima_col = str(row[0]) if row[0] else ""
+        prima_col_norm = _norm_giorno(prima_col)
+        if prima_col_norm in giorni_norm:
+            blocchi.append((prima_col_norm, i + 1))
 
     return blocchi
 
@@ -270,10 +279,11 @@ def trova_colonna_settimana(intestazioni, settimana_n):
 
 
 def trova_blocco_per_giorno(blocchi, giorno):
+    giorno_norm = _norm_giorno(giorno)
     for nome, riga in blocchi:
-        if nome == giorno:
+        if nome == giorno_norm:
             return riga
-    raise ValueError("Giorno non trovato")
+    raise ValueError(f"Giorno non trovato: {giorno}")
 
 
 def estrai_menu(ws, riga_giorno, col_settimana):
